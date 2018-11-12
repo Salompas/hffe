@@ -1,22 +1,18 @@
 # Table of Contents
 
-1.  [HFFE: High-Frequency Financial Econometrics](#org5c72cdd)
-2.  [Under development](#orgff38988)
-    1.  [Add citation to getRV function](#org801e9a4)
-    2.  [Add citation to getBV function](#org525fa61)
-    3.  [Add citation to getTOD function](#org889c509)
-    4.  [Add citation to separateReturns function](#org5ca7272)
+1.  [HFFE: High-Frequency Financial Econometrics](#org51f1749)
+2.  [Under development](#orgc98678c)
 
 
-<a id="org5c72cdd"></a>
+<a id="org51f1749"></a>
 
 # HFFE: High-Frequency Financial Econometrics
 
 This package implements some tools of the high-frequency financial econometrics literature.
-The HFFE package provides a class \`Stock\`. This class can be used in two ways:
+The HFFE package provides a class `Stock`. This class can be used in two ways:
 
-1.  Instantiate the class and provide stock data. The instance \`\_<sub>init</sub>\_\_\` method will automatically compute geometric returns, realized and bipower variances, and separate diffusive from jump returns using the stock data supplied.
-2.  Use the class methods by themselves as needed. All of the methods in \`Stock\` are static methods and can be used without instantiating the class.
+1.  Instantiate the class and provide stock data. The instance `__init__` method will automatically compute geometric returns, realized and bipower variances, and separate diffusive from jump returns using the stock data supplied.
+2.  Use the class methods by themselves as needed. All of the methods in `Stock` are static methods and can be used without instantiating the class.
 
 The class can be instantiated via the default constructor by supplying an iterable containing prices (floats) and an iterable containing date stamps (in the format YYYYMMDD for year, month and day). The default constructor also takes an optional iterable containing time stamps (in the format HHMM for hour and minute).
 The data is assumed to be rectangular, meaning that each day contains the same number of price observations.
@@ -48,26 +44,11 @@ Example:
 	  f'Annualized Bipower Variance: {(252*stock.BV)**0.5}')
 
 
-<a id="orgff38988"></a>
+<a id="orgc98678c"></a>
 
 # Under development
 
-
-<a id="org801e9a4"></a>
-
-## TODO Add citation to getRV function
-
-
-<a id="org525fa61"></a>
-
-## TODO Add citation to getBV function
-
-
-<a id="org889c509"></a>
-
-## TODO Add citation to getTOD function
-
-
-<a id="org5ca7272"></a>
-
-## TODO Add citation to separateReturns function
+-   Add citation to getRV function
+-   Add citation to getBV function
+-   Add citation to getTOD function
+-   Add citation to separateReturns function
