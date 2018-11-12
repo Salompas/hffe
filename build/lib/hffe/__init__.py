@@ -22,6 +22,11 @@ class Stock:
             raise ValueError("Length of prices and dates do not match.")
         if timestamps is not None and len(prices) != len(timestamps):
             raise ValueError("Length of prices and time stamps do not match")
+        # if prices not a numpy array
+        if type(prices) is not np.ndarray:
+            # attempt converting prices to numpy array
+            prices = np.array(prices, dtype='float_')
+        self.prices = prices
         # setup variables for printing class via __repr__
         self.__filepath = None    # updated via the `fromCSV` constructor
         self.__repr = {'prices': repr(prices),
@@ -97,9 +102,9 @@ class Stock:
 
         Args:
             prices (numpy.ndarray, float): A vector containing stock prices.
-            dates (numpy.ndarray, int): A vector containing datetime.datetime instances
-                    each containing date (and possible time) stamps associated with
-                    the price observations.
+            datetimes (numpy.ndarray, int): A vector containing datetime.datetime
+                    instances each containing date (and possible time) stamps
+                    associated with the price observations.
 
         Returns:
             (Stock): An instance of the Stock class.
@@ -113,6 +118,62 @@ class Stock:
         dates = np.vectorize(toDate)(datetimes)
         times = np.vectorize(toTime)(datetimes)
         return Stock(prices, dates, times)
+
+    @classmethod
+    def fromSubsample(cls, prices, datetimes, prices_per_day, aggregator=None):
+        """Constructor: Creates a Stock instance by subsampling prices to a smaller
+        number of prices per day than present in the original data.
+
+        Args:
+            prices (numpy.ndarray, float): A vector containing stock prices.
+            datetimes (numpy.ndarray, int): A vector containing datetime.datetime
+                    instances each containing date (and possible time) stamps
+                    associated with the price observations.
+            prices_per_day (int): Number of prices per day to sample. For example, if
+                the original data has 400 prices per day, it is possible to
+                subsample it to have 80 prices per day by taking every 5th price of
+                the original data.
+            aggregator (function): Function used to aggregate prices. If None is given,
+                then the last value of the subsampling interval is used.
+
+        Returns:
+            (Stock): An instance of the Stock class.
+
+        """
+        return cls.fromDatetimes(prices, datetimes).subsample(
+            prices_per_day, aggregator=aggregator)
+
+    def subsample(self, prices_per_day, aggregator=None):
+        """Creates a new Stock instance by subsampling the prices of the original
+        instance.
+
+        Args:
+            prices_per_day (int): Number of prices per day to sample. For example, if
+                the original data has 400 prices per day, it is possible to
+                subsample it to have 80 prices per day by taking every 5th price of
+                the original data.
+            aggregator (function): Function used to aggregate prices. If None is given,
+                then the last value of the subsampling interval is used.
+
+        Returns:
+            (Stock): An instance of the Stock class with the new subsampled prices.
+        """
+        # check if can subsample without loosing data
+        if self.total['prices'] % prices_per_day != 0:
+            raise ValueError(
+                "Uneven subsampling, will incurr in loss of data.")
+        new_prices = np.full((prices_per_day*self.total['days'],),
+                             np.nan, dtype='float_')
+        # number of prices to aggregate at each interval
+        delta = self.total['prices']//prices_per_day
+        if aggregator is None:
+            def aggregator(x): return x[-1]
+        # aggregate prices at each interval
+        index = delta
+        for i in range(len(new_prices)):
+            new_prices[i] = aggregator(self.prices[index - delta:index])
+            index += delta
+        return Stock.fromDatetimes(new_prices, self.datetimes[delta-1::delta])
 
     @staticmethod
     def importStock(filepath):
