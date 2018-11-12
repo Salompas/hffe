@@ -85,6 +85,35 @@ class Stock:
         stock.filepath = filepath
         return stock
 
+    @classmethod
+    def fromDatetimes(cls, prices, datetimes):
+        """Constructor: creates a Stock instance by using date and time stamps already
+        in the datetime.datetime format.
+
+        Note:
+            This constructor is not faster than the default constructor. It only
+            offers convenience if you already have a vector with datetime.datetime
+            instances.
+
+        Args:
+            prices (numpy.ndarray, float): A vector containing stock prices.
+            dates (numpy.ndarray, int): A vector containing datetime.datetime instances
+                    each containing date (and possible time) stamps associated with
+                    the price observations.
+
+        Returns:
+            (Stock): An instance of the Stock class.
+        """
+        def toDate(datetime):
+            return datetime.year*10**4 + datetime.month*10**2 + datetime.day
+
+        def toTime(datetime):
+            return datetime.hour*10**2 + datetime.minute
+
+        dates = np.vectorize(toDate)(datetimes)
+        times = np.vectorize(toTime)(datetimes)
+        return Stock(prices, dates, times)
+
     @staticmethod
     def importStock(filepath):
         """Imports a CSV file containing stock prices and their associated
