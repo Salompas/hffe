@@ -211,26 +211,24 @@ class Stock:
 
         Args:
             date (iterable): List of dates in the format YYYYMMDD (year, month and day).
-            time (iterable): List of time stamps in the format HHMM (hour and minute).
+            time (iterable): List of time stamps in the format HHMM (hour and minute)
+                             or HHMMSS (hour, minute and second).
 
         Returns:
             datetimes (numpy.ndarray): List containing datetime.datetime instances.
         """
-        # define splits for YYYYMMDD and HHMM
-        date_slice = (slice(0, 4), slice(4, 6), slice(6, 8))
-        time_slice = (slice(0, -2), slice(-2, 4))
         datetimes = []
         if time is not None:
-            for YYYYMMDD, HHMM in zip(date, time):
-                date_str, time_str = str(YYYYMMDD), str(HHMM)
+            datetime_format = '%Y%m%d %H%M'
+            # is there SS (seconds) data
+            if time[0]/10**4 > 0:
+                datetime_format += '%S'
+            for YYYYMMDD, HHMMSS in zip(date, time):
                 datetimes.append(
-                    datetime(*[int(date_str[slice_]) for slice_ in date_slice],
-                             *[int(time_str[slice_]) for slice_ in time_slice]))
-        else:                   # no time stamp is supplied, only dates
+                    datetime.strptime(f'{YYYYMMDD} {HHMMSS}', datetime_format))
+        else:
             for YYYYMMDD in date:
-                date_str = str(YYYYMMDD)
-                datetimes.append(
-                    datetime(*[int(date_str[slice_]) for slice_ in date_slice]))
+                datetimes.append(datetime.strptime(str(YYYYMMDD), '%Y%m%d'))
         return np.array(datetimes)
 
     @staticmethod

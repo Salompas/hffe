@@ -4,7 +4,7 @@ The HFFE package provides a class =Stock=. This class can be used in two ways:
 1. Instantiate the class and provide stock data. The instance =__init__= method will automatically compute geometric returns, realized and bipower variances, and separate diffusive from jump returns using the stock data supplied.
 2. Use the class methods by themselves as needed. All of the methods in =Stock= are static methods and can be used without instantiating the class.
 
-The class can be instantiated via the default constructor by supplying an iterable containing prices (floats) and an iterable containing date stamps (in the format YYYYMMDD for year, month and day). The default constructor also takes an optional iterable containing time stamps (in the format HHMM for hour and minute).
+The class can be instantiated via the default constructor by supplying an iterable containing prices (floats) and an iterable containing date stamps (in the format YYYYMMDD for year, month and day). The default constructor also takes an optional iterable containing time stamps (in the format HHMM for hour and minute or HHMMSS for hour, minute and second).
 The data is assumed to be rectangular, meaning that each day contains the same number of price observations.
 
 Prices are assumed to be observed $N$ times per day, at the same discrete intervals. For example, if prices are sampled every 5 minutes starting from 9:30 AM and finishing at 4:00 PM, then we will have $N=79$ price observations per day.
@@ -38,3 +38,8 @@ Example:
 - Add citation to getBV function
 - Add citation to getTOD function
 - Add citation to separateReturns function
+- Add datetimes for returns
+- Add datetimes for variance measures
+- Create a function that returns id of prices and returns given a day
+- Create a function that returns all jumps in a given day or interval of days
+- Add function for the truncated variance
