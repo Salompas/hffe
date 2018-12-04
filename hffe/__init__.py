@@ -113,7 +113,7 @@ class Stock:
             return datetime.year*10**4 + datetime.month*10**2 + datetime.day
 
         def toTime(datetime):
-            return datetime.hour*10**2 + datetime.minute
+            return datetime.hour*10**4 + datetime.minute*10**2 + datetime.second
 
         dates = np.vectorize(toDate)(datetimes)
         times = np.vectorize(toTime)(datetimes)
@@ -221,7 +221,7 @@ class Stock:
         if time is not None:
             datetime_format = '%Y%m%d %H%M'
             # is there SS (seconds) data
-            if time[0]/10**4 > 0:
+            if time[0]/10**4 > 1:
                 datetime_format += '%S'
             for YYYYMMDD, HHMMSS in zip(date, time):
                 datetimes.append(
