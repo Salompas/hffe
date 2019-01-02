@@ -20,4 +20,7 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
         "Development Status :: 1 - Planning", ],
+    install_requires=[
+        "numpy >= 1.15.0"
+    ],
 )
