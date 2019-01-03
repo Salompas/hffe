@@ -1,8 +1,11 @@
 README.md
 setup.py
 hffe/__init__.py
+hffe/options.py
+hffe/stock.py
 hffe.egg-info/PKG-INFO
 hffe.egg-info/SOURCES.txt
 hffe.egg-info/dependency_links.txt
 hffe.egg-info/not-zip-safe
+hffe.egg-info/requires.txt
 hffe.egg-info/top_level.txt
