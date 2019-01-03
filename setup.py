@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='hffe',
-    version='0.0.5',
+    version='0.0.6',
     description='Implements high-frequency financial econometrics tools.',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -21,6 +21,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Development Status :: 1 - Planning", ],
     install_requires=[
-        "numpy >= 1.15.0"
+        "numpy >= 1.15.0",
+        "pandas >= 0.23.0",
     ],
 )
