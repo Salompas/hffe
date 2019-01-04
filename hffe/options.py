@@ -1,6 +1,13 @@
 from pandas import read_csv
 
 
+# class Option:
+#     def __init__(self, bid, ask):
+#         self.bid = bid
+#         self.ask = ask
+#         self.price = (bid + ask)/2
+
+
 class optionsFromCSV:
     def __init__(self, filepath, N, usecols=None, dtype=None):
         """Constructor: creates an iterable over options data stored
@@ -25,7 +32,7 @@ class optionsFromCSV:
         self.filepath = filepath
         self.N = N              # number of observations per option per day
         config = {'sep': ',', 'header': 0, 'usecols': usecols, 'dtype': dtype}
-        self.data = read_csv(filepath, **config).values
+        self.data = read_csv(filepath, **config)
         if len(self.data) % N != 0:
             raise ValueError("Total observations not divisible by N.")
 
@@ -35,7 +42,9 @@ class optionsFromCSV:
         """
         total_obs = len(self.data)//self.N
         for i in range(total_obs):
-            yield self.data[i*self.N:(i+1)*self.N, :]
+            start = i*self.N
+            stop = (i+1)*self.N - 1  # pandas slicing includes last index
+            yield self.data.loc[start:stop, :]
 
     def __iter__(self):
         return self.optionsIterator()
