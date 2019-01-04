@@ -1,32 +1,119 @@
 import numpy as np
 
 
-def stockFromCSV(filepath):
-    """Imports a CSV file containing stock prices and their associated
-       date and time stamps.
+class OptionChecker:
+    def __init__(self, verbose=False, assert_=False):
+        self.condition = (self.zeroBid, self.zeroAsk, self.stalePrices,)
+        self.assertions = (self.assertOptionType,)
+        self.verbose = verbose
+        self.assert_ = assert_
 
-    The file should contain no headers and have 3 columns.
-    The 1st column should have date stamps in the format YYYYMMDD (year,
-    month and  day).
-    The 2nd column should have time stamps in the format HHMM (hour and
-    minute) or HHMSS (hour, minute and seconds).
-    The 3rd column should have stock price values.
+    def __call__(self, option):
+        """Checks option data for liquidity issues and data recording issues.
 
-    Examples of valid lines:
-    20070805,0935,12.34
-    20121231,1404,0.35
+        If the object is constructed with assert_=True, then recording issues
+        are checked, and if any recording issue is found an AssertionError is
+        raised.
 
-    The first two columns are imported as integers, and the last column is
-    imported as floats.
+        If the object is constructed with verbose=True, then whenever an
+        option fails a check, a message is printed saying what failed.
 
-    Args:
-        filepath (string): Path to the CSV file to be imported.
+        Args:
+            option (pandas DataFrame): Dataframe containing options data. Must
+                    have columns named bid and ask, containing bid and ask
+                    prices stored as floats.
 
-    Returns:
-        (numpy.ndarray): Structured numpy array containing the keys 'date',
-                         'time' and 'price'.
-    """
-    return np.loadtxt(filepath,
-                      delimiter=',',
-                      dtype={'names': ('date', 'time', 'price'),
-                             'formats': ('int_', 'int_', 'float_')})
+        Returns:
+            result (bool): True if no issues are found in the data. False is
+                    if some issue is encountered.
+        """
+        if self.assert_:
+            all(self.checkAssertions(option))
+        return all(self.checkConditions(option))
+
+    def checkConditions(self, option):
+        """Checks multiple conditions to validate whether an option's data
+        does not suffer liquidity issues."""
+        for condition in self.condition:
+            yield condition(option)
+
+    def checkAssertions(self, option):
+        """Checks whether option's data could have recording problems."""
+        for assertion in self.assertions:
+            yield assertion(option)
+
+    # -------------- CONDITIONS ----------------
+    # Conditions for an option's data to be considered ok
+    #
+    def zeroBid(self, option):
+        """Checks if any of the reported bid prices are zero."""
+        if any(option.bid == 0):
+            if self.verbose:
+                print('zero bid')
+            return False
+        else:
+            return True
+
+    def zeroAsk(self, option):
+        """Checks if any of the reported ask prices are zero."""
+        if any(option.ask == 0):
+            if self.verbose:
+                print('zero ask')
+            return False
+        else:
+            return True
+
+    def stalePrices(self, option, proportion=0.5):
+        """Checks if prices do not change during most of the time period.
+
+        Args:
+            option (pandas DataFrame): Dataframe containing options data. Must
+                    have columns named bid and ask, containing bid and ask
+                    prices stored as floats.
+            proportion (float): Number strictly between 0 and 1. Describes
+                    the accepted proportion of stale prices in a day.
+                    For example: if proportion is 0.3, then as long as less
+                    than 30% of the price observations are stale (change),
+                    then the option data is deemed ok. If more than 30% of
+                    the options prices do not change from one time instant
+                    to another, then the options data is considered stale.
+
+        Returns:
+            result (bool): True if prices are not stale, False otherwise.
+        """
+        price = (option.bid + option.ask)/2  # mid quote price
+        no_changes = np.sum(np.diff(price) == 0)
+        no_change_proportion = no_changes/price.size
+        # if prices do not change most of the day
+        if no_change_proportion > proportion:
+            if self.verbose:
+                print(f'stale prices: {100*no_change_proportion:.0f}% of day')
+            return False
+        else:
+            return True
+    # ------------------------------------------
+
+    # -------------- ASSERTIONS ----------------
+    # Assertions that show something is wrong in the data or code
+    #
+
+    def assertOptionType(self, option):
+        """Checks if option type changes in the data, which indicates an error
+        in the database or possibly the code.
+        """
+        first_type = option.option_type.iloc[0]
+        assert all(option.option_type ==
+                   first_type), "Single option has put and call types"
+        return True
+    # ------------------------------------------
+
+    # -------------- UTILS ---------------------
+    def isPut(self, option):
+        """Checks if option is a put."""
+        if all(option.option_type == 'P'):
+            return True
+        else:
+            if self.verbose:
+                print('call')
+            return False
+    # ------------------------------------------

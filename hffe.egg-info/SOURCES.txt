@@ -2,6 +2,7 @@ README.md
 setup.py
 hffe/__init__.py
 hffe/options.py
+hffe/parsers.py
 hffe/stock.py
 hffe.egg-info/PKG-INFO
 hffe.egg-info/SOURCES.txt

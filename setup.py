@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='hffe',
-    version='0.0.6',
+    version='0.0.7',
     description='Implements high-frequency financial econometrics tools.',
     long_description=long_description,
     long_description_content_type="text/markdown",
