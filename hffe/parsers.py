@@ -9,6 +9,24 @@ class OptionChecker:
         self.assert_ = assert_
 
     def __call__(self, option):
+        """Checks option data for liquidity issues and data recording issues.
+
+        If the object is constructed with assert_=True, then recording issues
+        are checked, and if any recording issue is found an AssertionError is
+        raised.
+
+        If the object is constructed with verbose=True, then whenever an
+        option fails a check, a message is printed saying what failed.
+
+        Args:
+            option (pandas DataFrame): Dataframe containing options data. Must
+                    have columns named bid and ask, containing bid and ask
+                    prices stored as floats.
+
+        Returns:
+            result (bool): True if no issues are found in the data. False is
+                    if some issue is encountered.
+        """
         if self.assert_:
             all(self.checkAssertions(option))
         return all(self.checkConditions(option))
@@ -45,13 +63,31 @@ class OptionChecker:
         else:
             return True
 
-    def stalePrices(self, option):
-        """Checks if prices do not change during the time period."""
+    def stalePrices(self, option, proportion=0.5):
+        """Checks if prices do not change during most of the time period.
+
+        Args:
+            option (pandas DataFrame): Dataframe containing options data. Must
+                    have columns named bid and ask, containing bid and ask
+                    prices stored as floats.
+            proportion (float): Number strictly between 0 and 1. Describes
+                    the accepted proportion of stale prices in a day.
+                    For example: if proportion is 0.3, then as long as less
+                    than 30% of the price observations are stale (change),
+                    then the option data is deemed ok. If more than 30% of
+                    the options prices do not change from one time instant
+                    to another, then the options data is considered stale.
+
+        Returns:
+            result (bool): True if prices are not stale, False otherwise.
+        """
         price = (option.bid + option.ask)/2  # mid quote price
-        price_changes = np.diff(price, axis=0)
-        if all(price_changes == 0):  # if prices do not change all day
+        no_changes = np.sum(np.diff(price) == 0)
+        no_change_proportion = no_changes/price.size
+        # if prices do not change most of the day
+        if no_change_proportion > proportion:
             if self.verbose:
-                print('stale prices')
+                print(f'stale prices: {100*no_change_proportion:.0f}% of day')
             return False
         else:
             return True
