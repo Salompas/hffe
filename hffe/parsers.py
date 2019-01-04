@@ -2,19 +2,25 @@ import numpy as np
 
 
 class OptionChecker:
-    def __init__(self, verbose=False):
-        self.condition = (self.zeroBid, self.zeroAsk, self.stalePrices)
-        self.assertions = (self.assertOptionType)
+    def __init__(self, verbose=False, assert_=False):
+        self.condition = (self.zeroBid, self.zeroAsk, self.stalePrices,)
+        self.assertions = (self.assertOptionType,)
         self.verbose = verbose
+        self.assert_ = assert_
 
     def __call__(self, option):
-        return self.checkConditions(option)
+        if self.assert_:
+            all(self.checkAssertions(option))
+        return all(self.checkConditions(option))
 
     def checkConditions(self, option):
+        """Checks multiple conditions to validate whether an option's data
+        does not suffer liquidity issues."""
         for condition in self.condition:
             yield condition(option)
 
     def checkAssertions(self, option):
+        """Checks whether option's data could have recording problems."""
         for assertion in self.assertions:
             yield assertion(option)
 
