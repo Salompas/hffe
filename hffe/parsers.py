@@ -24,7 +24,9 @@ class OptionChecker:
         for assertion in self.assertions:
             yield assertion(option)
 
+    # -------------- CONDITIONS ----------------
     # Conditions for an option's data to be considered ok
+    #
     def zeroBid(self, option):
         """Checks if any of the reported bid prices are zero."""
         if any(option.bid == 0):
@@ -53,17 +55,12 @@ class OptionChecker:
             return False
         else:
             return True
+    # ------------------------------------------
 
-    def isPut(self, option):
-        """Checks if option is a put."""
-        if all(option.option_type == 'P'):
-            return True
-        else:
-            if self.verbose:
-                print('call')
-            return False
-
+    # -------------- ASSERTIONS ----------------
     # Assertions that show something is wrong in the data or code
+    #
+
     def assertOptionType(self, option):
         """Checks if option type changes in the data, which indicates an error
         in the database or possibly the code.
@@ -72,3 +69,15 @@ class OptionChecker:
         assert all(option.option_type ==
                    first_type), "Single option has put and call types"
         return True
+    # ------------------------------------------
+
+    # -------------- UTILS ---------------------
+    def isPut(self, option):
+        """Checks if option is a put."""
+        if all(option.option_type == 'P'):
+            return True
+        else:
+            if self.verbose:
+                print('call')
+            return False
+    # ------------------------------------------
