@@ -65,7 +65,7 @@ class OptionChecker:
         """Checks if option type changes in the data, which indicates an error
         in the database or possibly the code.
         """
-        first_type = option.option_type[0]
+        first_type = option.option_type.iloc[0]
         assert all(option.option_type ==
                    first_type), "Single option has put and call types"
         return True
