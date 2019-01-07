@@ -4,7 +4,7 @@ import numpy as np
 class OptionChecker:
     def __init__(self, verbose=False, assert_=False):
         self.condition = (self.zeroBid, self.zeroAsk, self.stalePrices,)
-        self.assertions = (self.assertOptionType,)
+        self.assertions = (self.assertOptionType, self.assertFirstLastDate)
         self.verbose = verbose
         self.assert_ = assert_
 
@@ -96,7 +96,6 @@ class OptionChecker:
     # -------------- ASSERTIONS ----------------
     # Assertions that show something is wrong in the data or code
     #
-
     def assertOptionType(self, option):
         """Checks if option type changes in the data, which indicates an error
         in the database or possibly the code.
@@ -104,6 +103,16 @@ class OptionChecker:
         first_type = option.option_type.iloc[0]
         assert all(option.option_type ==
                    first_type), "Single option has put and call types"
+        return True
+
+    def assertFirstLastDate(self, option, start='09:31:00', stop='16:15:00'):
+        """Checks if the first and last quote times are as expected, and if
+        there is no discrepancy in the dates."""
+        f_date, f_time = option.quote_datetime.iloc[0].split(' ')
+        assert f_time == start, f"Data has wrong start time (f{f_time})."
+        l_date, l_time = option.quote_datetime.iloc[-1].split(' ')
+        assert l_time == stop, f"Data has wrong stop time (f{l_time})."
+        assert l_date == f_date, "Data ends at different date from start."
         return True
     # ------------------------------------------
 
