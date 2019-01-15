@@ -1,11 +1,9 @@
+from datetime import datetime
+
 from pandas import read_csv
 
-
-# class Option:
-#     def __init__(self, bid, ask):
-#         self.bid = bid
-#         self.ask = ask
-#         self.price = (bid + ask)/2
+from .utilities import get3rdFriday
+from .parsers import OptionChecker
 
 
 class optionsFromCSV:
@@ -48,3 +46,115 @@ class optionsFromCSV:
 
     def __iter__(self):
         return self.optionsIterator()
+
+
+class SPX:
+    MINUTES_IN_YEAR = (365 * 24 * 60)
+    SYMBOLS = ('SPX', 'SPXW', 'SPXQ',
+               'SPB', 'SPQ', 'SPT', 'SPV', 'SPZ',
+               'SVP', 'SXB', 'SXM', 'SXY', 'SXZ',
+               'SYG', 'SYU', 'SYV', 'SZP',)
+
+    @classmethod
+    def Checker(cls):
+        """Checker returns an instance of the class hffe.parsers.OptionChecker,
+        augmented to check for issues specific to SPX options."""
+        checker = OptionChecker()
+        checker.registerConditions(cls.acceptedSymbol, cls.weekly)
+        return checker
+
+    @classmethod
+    def acceptedSymbol(cls, option):
+        """Checks if option ticker symbol corresponds to an accepted symbol."""
+        return option.ticker_symbol.iloc[0] in cls.SYMBOLS
+
+    @classmethod
+    def weekly(cls, option):
+        """Keep only SPX options that are standard or weekly but being traded
+        after 2013."""
+        exp_date = datetime.strptime(option.expiration.iloc[0], '%Y-%m-%d')
+        if cls.isWeekly(exp_date) and exp_date.year <= 2013:
+            return False
+        return True
+
+    @classmethod
+    def tenor(cls, today, expiration):
+        """tenor computes the tenor of an SPX option following the
+        CBOE's VIX methodology (see white paper).
+
+        Args:
+            today (datetime): A datetime object containing the quote datetime
+                   of the option. Must have year, month, day, hour, minute and
+                   second.
+            expiration (date): A date object containing the expiration
+                   date of the option. Must have year, month and day only.
+
+        Returns:
+            tenor (float): Tenor of the option in years.
+        """
+        assert expiration.isoweekday() != 7, "Option expires on Sunday"
+        # some options have the expiration date set to saturday
+        # change it to friday to compute tenor correctly
+        if expiration.isoweekday() == 6:
+            expiration = expiration.replace(day=(expiration.day - 1))
+        # compute remaining minutes in current day
+        # +1 for the minute between 23:59 and 24:00
+        minutes_current_day = (
+            (today.replace(hour=23, minute=59) - today).seconds // 60) + 1
+        # compute remaining minutes for days until the expiration date
+        # -1 for the day the option expires
+        minutes_other = ((expiration - today.date()).days - 1) * (24 * 60)
+        # compute remaining minutes on the settlement date
+        # if the option is Weekly the settlement time is at 4 PM
+        # if the option is Standard the settlement is at 9:30 AM
+        # (PM settled if Weekly, AM settled if Standard SPX)
+        # Standard SPX options expire on the 3rd Friday of the month
+        if cls.isStandard(expiration):
+            minutes_settlement = 9.5 * 60
+        else:
+            minutes_settlement = (9.5 + 2.5 + 4) * 60
+        # Total minutes to expiration
+        minutes_to_expiration = (minutes_current_day + minutes_other +
+                                 minutes_settlement)
+        return minutes_to_expiration / cls.MINUTES_IN_YEAR
+
+    @staticmethod
+    def isStandard(expiration):
+        """isWeekly checks if expiration date corresponds to a Standard SPX
+        option.
+
+        Standard SPX options expire on the 3rd Friday of the month with AM
+        settlement, meaning they close at the market open.
+
+        Args:
+            expiration (date): A date object containing the expiration
+                       date of the option. Must have year, month and
+                       day.
+
+        Returns:
+            (bool): True if Standard SPX option.
+        """
+        third_friday = get3rdFriday(expiration.year, expiration.month)
+        return expiration == third_friday
+
+    @classmethod
+    def isWeekly(cls, expiration):
+        """isWeekly checks if the expiration date corresponds to a Weekly
+        SPX option.
+
+        Weeklys were introduced in 2005, but had a very low liquidity for many
+        years. The CBOE itself did not include Weeklys in the computation of
+        the VIX until after 2013 (in 2014 Weeklys were included). For this
+        reason, when selecting options it is often argued that Weeklys
+        prior to 2014 should be disconsidered.
+
+        Args:
+            expiration (date): A date object containing the expiration
+                       date of the option. Must have year, month and
+                       day.
+
+        Returns:
+            (bool): True if Weekly SPX option.
+
+        """
+        return not cls.isStandard(expiration)
