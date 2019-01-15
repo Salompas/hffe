@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import partial
 
 from pandas import read_csv
 
@@ -50,30 +51,41 @@ class optionsFromCSV:
 
 class SPX:
     MINUTES_IN_YEAR = (365 * 24 * 60)
-    SYMBOLS = ('SPX', 'SPXW', 'SPXQ',
-               'SPB', 'SPQ', 'SPT', 'SPV', 'SPZ',
-               'SVP', 'SXB', 'SXM', 'SXY', 'SXZ',
-               'SYG', 'SYU', 'SYV', 'SZP',)
+    SYMBOLS = set(['SPX', 'SPXW', 'SPXQ',
+                   'SPB', 'SPQ', 'SPT', 'SPV', 'SPZ',
+                   'SVP', 'SXB', 'SXM', 'SXY', 'SXZ',
+                   'SYG', 'SYU', 'SYV', 'SZP', ])
 
     @classmethod
-    def Checker(cls):
+    def Checker(cls, verbose=False, assert_=True):
         """Checker returns an instance of the class hffe.parsers.OptionChecker,
         augmented to check for issues specific to SPX options."""
-        checker = OptionChecker()
-        checker.registerConditions(cls.acceptedSymbol, cls.weekly)
+        conditions = (cls.acceptedSymbol, cls.weekly)
+        if verbose:
+            conditions = [partial(func, verbose=True) for func in conditions]
+        checker = OptionChecker(verbose=verbose, assert_=assert_)
+        checker.registerConditions(*conditions)
         return checker
 
     @classmethod
-    def acceptedSymbol(cls, option):
-        """Checks if option ticker symbol corresponds to an accepted symbol."""
-        return option.ticker_symbol.iloc[0] in cls.SYMBOLS
+    def acceptedSymbol(cls, option, verbose=False):
+        """Checks if option ticker symbol (root) corresponds to an accepted
+        symbol."""
+        if option.root.iloc[0] in cls.SYMBOLS:
+            return True
+        else:
+            if verbose:
+                print('Option root symbol not accepted')
+            return False
 
     @classmethod
-    def weekly(cls, option):
+    def weekly(cls, option, verbose=False):
         """Keep only SPX options that are standard or weekly but being traded
         after 2013."""
         exp_date = datetime.strptime(option.expiration.iloc[0], '%Y-%m-%d')
         if cls.isWeekly(exp_date) and exp_date.year <= 2013:
+            if verbose:
+                print('Weekly option and before 2014')
             return False
         return True
 
@@ -134,6 +146,10 @@ class SPX:
         Returns:
             (bool): True if Standard SPX option.
         """
+        # some options have the expiration date set to saturday
+        # change it to friday to compute tenor correctly
+        if expiration.isoweekday() == 6:
+            expiration = expiration.replace(day=(expiration.day - 1))
         third_friday = get3rdFriday(expiration.year, expiration.month)
         return expiration == third_friday
 
