@@ -2,8 +2,8 @@ import numpy as np
 
 
 class OptionChecker:
-    def __init__(self, verbose=False, assert_=False):
-        self.conditions = (self.zeroBid, self.zeroAsk, self.stalePrices,)
+    def __init__(self, verbose=False, assert_=True):
+        self.conditions = (self.zeroBid, self.zeroAsk, self.stalePrices)
         self.assertions = (self.assertOptionType, self.assertFirstLastDate)
         self.verbose = verbose
         self.assert_ = assert_
