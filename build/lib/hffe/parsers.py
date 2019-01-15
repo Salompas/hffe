@@ -3,7 +3,7 @@ import numpy as np
 
 class OptionChecker:
     def __init__(self, verbose=False, assert_=False):
-        self.condition = (self.zeroBid, self.zeroAsk, self.stalePrices,)
+        self.conditions = (self.zeroBid, self.zeroAsk, self.stalePrices,)
         self.assertions = (self.assertOptionType, self.assertFirstLastDate)
         self.verbose = verbose
         self.assert_ = assert_
@@ -34,13 +34,21 @@ class OptionChecker:
     def checkConditions(self, option):
         """Checks multiple conditions to validate whether an option's data
         does not suffer liquidity issues."""
-        for condition in self.condition:
+        for condition in self.conditions:
             yield condition(option)
 
     def checkAssertions(self, option):
         """Checks whether option's data could have recording problems."""
         for assertion in self.assertions:
             yield assertion(option)
+
+    def registerConditions(self, *extra_conditions):
+        """Adds new conditions to be checked."""
+        self.conditions = (*self.conditions, *extra_conditions)
+
+    def registerAssertions(self, *extra_assertions):
+        """Adds new assertions to be asserted."""
+        self.assertions = (*self.assertions, *extra_assertions)
 
     # -------------- CONDITIONS ----------------
     # Conditions for an option's data to be considered ok
