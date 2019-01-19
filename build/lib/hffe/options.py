@@ -1,3 +1,4 @@
+from collections import namedtuple
 from datetime import datetime
 from functools import partial
 
@@ -51,10 +52,55 @@ class optionsFromCSV:
 
 class SPX:
     MINUTES_IN_YEAR = (365 * 24 * 60)
+    # List of symbols for SPX options, see Appendix A.1 of ABG2011
     SYMBOLS = set(['SPX', 'SPXW', 'SPXQ',
                    'SPB', 'SPQ', 'SPT', 'SPV', 'SPZ',
                    'SVP', 'SXB', 'SXM', 'SXY', 'SXZ',
                    'SYG', 'SYU', 'SYV', 'SZP', ])
+    # Define field names for SPX data from CBOE
+    # currently CBOE is the official vendor of SPX options data
+    Field = namedtuple('Field', ('column_number', 'field_type'))
+    # The strings below are the column names in each of the csv
+    # files containing SPX options data.
+    Columns = {'quote_datetime': Field(1, 'str_'),
+               'root':           Field(2, 'str_'),
+               'expiration':     Field(3, 'str_'),
+               'strike':         Field(4, 'float_'),
+               'option_type':    Field(5, 'str_'),
+               'trade_volume':   Field(10, 'float_'),
+               'bid_size':       Field(11, 'float_'),
+               'bid':            Field(12, 'float_'),
+               'ask_size':       Field(13, 'float_'),
+               'ask':            Field(14, 'float_'), }
+
+    @classmethod
+    def getCSVConfig(cls, column_names):
+        """Generates mapping of column numbers and data types required
+        for reading the options data.
+
+        The resulting dictionary is passed to the optionsFromCSV class
+        constructor.
+
+        Args:
+            column_names (list of str): List containing the column names
+                of the columns we want to fetch from the data.
+
+        Returns:
+            result (dict): Dictionary containing the column indices
+                that correspond to the column names we want, and the
+                corresponding data types of each column.
+
+        Example:
+            config = getCSVConfig('bid', 'ask')
+            filename = '2007-03-01.csv'
+            options_iterator = optionsFromCSV(filename, N=405, **config)
+        """
+        column_numbers = [
+            cls.Columns[name].column_number for name in column_names]
+        dtypes = {cls.Columns[name].column_number: cls.Columns[name].field_type for
+                  name in column_names}
+        config = {'usecols': column_numbers, 'dtype': dtypes}
+        return config
 
     @classmethod
     def Checker(cls, verbose=False, assert_=True):
