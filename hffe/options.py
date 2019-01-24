@@ -1,8 +1,11 @@
+from os import cpu_count
+from concurrent import futures
 from collections import namedtuple
 from datetime import datetime
 from functools import partial
 
-from pandas import read_csv
+from pandas import read_csv, DataFrame
+from tqdm import tqdm
 
 from .utilities import get3rdFriday
 from .parsers import OptionChecker
@@ -72,6 +75,10 @@ class SPX:
                'bid':            Field(12, 'float_'),
                'ask_size':       Field(13, 'float_'),
                'ask':            Field(14, 'float_'), }
+    # Fields to be fetched
+    FIELDS = ('quote_datetime', 'root', 'expiration', 'strike',
+              'option_type', 'trade_volume', 'bid', 'ask',
+              'bid_size', 'ask_size')
 
     @classmethod
     def getCSVConfig(cls, column_names):
@@ -110,6 +117,26 @@ class SPX:
         if verbose:
             conditions = [partial(func, verbose=True) for func in conditions]
         checker = OptionChecker(verbose=verbose, assert_=assert_)
+        checker.registerConditions(*conditions)
+        return checker
+
+    @classmethod
+    def createChecker(cls, verbose=False, assert_=True,
+                      symbols=True, weekly=True, put_only=True):
+        """Checker returns an instance of the class hffe.parsers.OptionChecker,
+        augmented to check for issues specific to SPX options."""
+        # Create basic checker
+        checker = OptionChecker(verbose=verbose, assert_=assert_)
+        # Add extra checkers for SPX type options
+        conditions = []
+        if symbols:
+            conditions.append(cls.acceptedSymbol)
+        if weekly:
+            conditions.append(cls.weekly)
+        if verbose:
+            conditions = [partial(func, verbose=True) for func in conditions]
+        if put_only:
+            conditions.append(checker.isPut)  # isPut does not take verbose
         checker.registerConditions(*conditions)
         return checker
 
@@ -185,7 +212,7 @@ class SPX:
         settlement, meaning they close at the market open.
 
         Args:
-            expiration (date): A date object containing the expiration
+            expiration (datetime): A datetime object containing the expiration
                        date of the option. Must have year, month and
                        day.
 
@@ -197,6 +224,8 @@ class SPX:
         if expiration.isoweekday() == 6:
             expiration = expiration.replace(day=(expiration.day - 1))
         third_friday = get3rdFriday(expiration.year, expiration.month)
+        # get3rdFriday returns datetime so expiration needs to be datetime
+        # otherwise comparison always fails
         return expiration == third_friday
 
     @classmethod
@@ -211,7 +240,7 @@ class SPX:
         prior to 2014 should be disconsidered.
 
         Args:
-            expiration (date): A date object containing the expiration
+            expiration (datetime): A datetime object containing the expiration
                        date of the option. Must have year, month and
                        day.
 
@@ -220,3 +249,55 @@ class SPX:
 
         """
         return not cls.isStandard(expiration)
+
+    @classmethod
+    def createQuery(cls, checker, parser):
+        """Creates a dataframe containing all options data from
+        a given filename.
+        """
+        config = cls.getCSVConfig(cls.FIELDS)
+
+        def query(filename):
+            data = []
+            for option in optionsFromCSV(filename, N=405, **config):
+                if checker(option):
+                    data.append(parser(option))
+            return DataFrame(data)
+        return query
+
+    @classmethod
+    def getOptionsThreaded(cls, filenames, query):
+        """Obtains all options data from a list of files. Uses threads to
+        speed up I/O.
+
+        Args:
+            filenames (list[str]): Set containings the csv filenames from where
+                to recover the options data.
+            query (function): A function that parses one csv file, extracting
+                the options data. To construct this function use
+                SPX.createQuery.
+
+        Returns:
+            result (dict): Dictionary mapping filenames to dataframes with
+                the options data.
+        """
+        to_do_map = {}
+        errors = {}
+        done_map = {}
+        with futures.ThreadPoolExecutor(max_workers=2*cpu_count()) as executor:
+            count = 0
+            # Submit query for each filename
+            for filename in filenames:
+                future = executor.submit(query, filename)
+                to_do_map[future] = filename
+                count += 1
+            done_iter = tqdm(futures.as_completed(to_do_map), total=count)
+            for future in done_iter:
+                filename = to_do_map[future]
+                try:
+                    res = future.result()
+                except Exception as excep:
+                    errors[filename] = excep
+                else:
+                    done_map[filename] = res
+        return done_map, errors
