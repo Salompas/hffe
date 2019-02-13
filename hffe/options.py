@@ -6,6 +6,7 @@ from functools import partial
 
 from pandas import read_csv, DataFrame
 from tqdm import tqdm
+import numpy as np
 
 from .utilities import get3rdFriday
 from .parsers import OptionChecker
@@ -121,8 +122,13 @@ class SPX:
         return checker
 
     @classmethod
-    def createChecker(cls, verbose=False, assert_=True,
-                      symbols=True, weekly=True, put_only=True):
+    def createChecker(cls,
+                      verbose=False,
+                      assert_=True,
+                      symbols=True,
+                      weekly=True,
+                      put_only=True,
+                      traded=False):
         """Checker returns an instance of the class hffe.parsers.OptionChecker,
         augmented to check for issues specific to SPX options."""
         # Create basic checker
@@ -133,6 +139,8 @@ class SPX:
             conditions.append(cls.acceptedSymbol)
         if weekly:
             conditions.append(cls.weekly)
+        if traded:
+            conditions.append(cls.traded)
         if verbose:
             conditions = [partial(func, verbose=True) for func in conditions]
         if put_only:
@@ -161,6 +169,17 @@ class SPX:
                 print('Weekly option and before 2014')
             return False
         return True
+
+    @classmethod
+    def traded(cls, option, threshold=1.0, verbose=False):
+        """Keep only SPX options that have at least a certain number of trades
+        at the given day."""
+        if np.sum(option.trade_volume >= threshold):
+            return True
+        else:
+            if verbose:
+                print(f'Total trade volume for option is below {threshold}')
+            return False
 
     @classmethod
     def tenor(cls, today, expiration):
