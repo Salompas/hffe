@@ -1,4 +1,5 @@
 * HFFE: High-Frequency Financial Econometrics
+** Introduction
 This package implements some tools of the high-frequency financial econometrics literature.
 The HFFE package provides a class =Stock=. This class can be used in two ways:
 1. Instantiate the class and provide stock data. The instance =__init__= method will automatically compute geometric returns, realized and bipower variances, and separate diffusive from jump returns using the stock data supplied.
@@ -33,13 +34,23 @@ Example:
         f'Bipower Variance: {stock.BV}\n'
         f'Annualized Bipower Variance: {(252*stock.BV)**0.5}')
 #+END_SRC
-* Under development
-- Add citation to getRV function
-- Add citation to getBV function
-- Add citation to getTOD function
-- Add citation to separateReturns function
-- Add datetimes for returns
-- Add datetimes for variance measures
-- Create a function that returns id of prices and returns given a day
-- Create a function that returns all jumps in a given day or interval of days
-- Add function for the truncated variance
+
+** Stocks
+** Options
+** Under development
+*** TODO Redo introduction
+*** TODO Add examples on how to use stock.py
+*** TODO Add examples on how to use options.py
+*** TODO Change file stock.py to stocks.py
+*** TODO Add citations
+**** TODO To volatility estimators
+**** TODO To jump threshold and separtion
+**** TODO To time-of-day factor
+*** TODO Sample data
+**** TODO Sample stock data
+**** TODO Sample SPX options data
+*** TODO [stock.py] Change internals to pandas dataframe
+*** TODO [stock.py]
+*** TODO [stock.py] Truncated variance estimator
+*** TODO [stock.py] Local volatility estimator
+*** TODO [stock.py] Confidence intervals

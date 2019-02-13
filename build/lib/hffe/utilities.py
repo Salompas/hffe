@@ -1,5 +1,9 @@
+from typing import NamedTuple
 import time
 from datetime import datetime
+
+
+import pandas as pd
 
 
 def timeFunction(func, *args, **kwargs):
@@ -49,3 +53,16 @@ def get3rdFriday(year, month):
     if w != 4:
         d = d.replace(day=(15 + (4 - w) % 7))
     return d
+
+
+def valuesAroundTime(series: pd.Series, timestamp: pd.Timestamp,
+                     window_size: int) -> (pd.Series, pd.Series):
+    """Returns values from an intraday time series around a specified timestamp.
+    """
+    if window_size <= 0:
+        raise ValueError("Non-positive window size")
+    delta = pd.Timedelta(minutes=window_size)
+    offset = pd.Timedelta(minutes=1)
+    before = series[timestamp - delta: timestamp - offset]
+    after = series[timestamp + offset: timestamp + delta]
+    return before, after

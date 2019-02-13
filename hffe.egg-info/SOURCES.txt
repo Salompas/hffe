@@ -6,6 +6,7 @@ hffe/options.py
 hffe/parsers.py
 hffe/stock.py
 hffe/utilities.py
+hffe/volatility.py
 hffe.egg-info/PKG-INFO
 hffe.egg-info/SOURCES.txt
 hffe.egg-info/dependency_links.txt
