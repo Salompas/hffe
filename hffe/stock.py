@@ -1,6 +1,9 @@
-import numpy as np
 import bisect
 from datetime import datetime, timedelta
+from functools import partial
+
+import numpy as np
+import pandas as pd
 
 
 class Stock:
@@ -372,3 +375,81 @@ class Stock:
         rc[rc_indices] = returns[rc_indices]
         rd[rd_indices] = returns[rd_indices]
         return rc, rd
+
+
+def toDataFrame(filename: str) -> str:
+    """Loads Stock data from a CSV file and converts to a dataframe, which is
+    then stored in the HDF5 format. Returns name of the new file.
+    """
+    assert filename[-4:] == '.csv', "Expected CSV file."
+    config = {
+        'sep': ',',
+        'header': None,
+        'names': ['date', 'time', 'price'],
+        'usecols': (0, 1, 2),
+        'dtype': {
+            0: 'int_',
+            1: 'int_',
+            2: 'float_'
+        }
+    }
+    df = pd.read_csv(filename, **config)
+    print('Data loaded. Now converting timestamps (takes some time).')
+    df['timestamp'] = (df.date.apply(str) + df.time.apply(str)).apply(
+        partial(pd.to_datetime, format='%Y%m%d%H%M'))
+    df = df.set_index('timestamp').drop(columns=['date', 'time'])
+    new_name = f'{filename[:-4]}.h5'
+    df.to_hdf(new_name, key='df', mode='w', format='fixed')
+    return new_name
+
+
+class StockFast:
+    """Light-weight Stock class that does not automatically compute variance
+    estimates.
+    Loads data from a HDF5 file containing stock prices and timestamps.
+    """
+
+    def __init__(self, filename: str):
+        # Load price data
+        assert filename[-3:] == '.h5', "Expected filename ending in .h5"
+        self.filename = filename
+        self.data = pd.read_hdf(filename)
+        # Fill out number of: prices per day, returns per day, days
+        self.counts = self._counts()
+        # Compute log-returns
+        self.returns = np.log(self.data.price).groupby(
+            self.data.index.date).diff().dropna()
+        # Create empty dataframe to hold variance estimates
+        self.variance = pd.DataFrame()
+
+    def __repr__(self):
+        return f'{type(self).__name__}({self.filename})'
+
+    def _counts(self) -> dict:
+        """Counts number of: prices per day, returns per day and total days.
+        """
+        prices_per_day = self.data[self.data.index.date <=
+                                   self.data.index[0].date()].shape[0]
+        assert self.data.shape[0] % prices_per_day == 0, \
+            "Irregular number of prices per day"
+        total_days = self.data.shape[0]//prices_per_day
+        return {'N': prices_per_day,
+                'n': prices_per_day - 1,
+                'T': total_days}
+
+    def RV(self):
+        """Computes the Realized Variance estimator from returns, storing
+        results in self.variance"""
+        def dayRV(ret):
+            return np.sum(ret**2)
+        self.variance['RV'] = self.returns.groupby(
+            self.returns.index.date).apply(dayRV)
+
+    def BV(self):
+        """Computes the Bipower Variance estimator from returns, storing
+        results in self.variance"""
+        def dayBV(ret):
+            values = ret.values
+            return (np.pi/2)*np.sum(np.abs(values[:-1]*values[1:]))
+        self.variance['BV'] = self.returns.groupby(
+            self.returns.index.date).apply(dayBV)
