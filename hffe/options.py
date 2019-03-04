@@ -7,6 +7,7 @@ from functools import partial
 from pandas import read_csv, DataFrame
 from tqdm import tqdm
 import numpy as np
+from scipy import stats
 
 from .utilities import get3rdFriday
 from .parsers import OptionChecker
@@ -320,3 +321,33 @@ class SPX:
                 else:
                     done_map[filename] = res
         return done_map, errors
+
+
+class BLS:
+    @staticmethod
+    def delta(strike: float,
+              underlying_price: float,
+              tenor: float,
+              sigma: float,
+              interest: float,
+              call: bool = True):
+        """Computes Black-Scholes option delta.
+
+        Details: https://en.wikipedia.org/wiki/Black–Scholes_model#The_Greeks
+        """
+        d1 = (np.log(underlying_price/strike) +
+              (interest + sigma**2/2)*tenor)/(sigma*tenor)
+        option_delta = stats.norm.cdf(d1)
+        if not call:
+            option_delta = option_delta - 1
+        return option_delta
+
+    @staticmethod
+    def omega(delta: float,
+              underlying_price: float,
+              option_price: float):
+        """Computes Black-Scholes option omega (elasticity, leverage).
+
+        Details: https://en.wikipedia.org/wiki/Greeks_(finance)
+        """
+        return delta*underlying_price/option_price
