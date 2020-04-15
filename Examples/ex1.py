@@ -1,4 +1,3 @@
-#+BEGIN_SRC jupyter-python :session py :results output :async yes :tangle Examples/ex1.py
 import os
 
 data = OptionsFromCSV(os.path.join("Data", "20070108.csv"), 405)
@@ -6,6 +5,3 @@ for option in data:
     # Validate data
     # Filter data
     # Split by minute
-
-
-#+END_SRC
