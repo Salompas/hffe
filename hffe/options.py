@@ -13,7 +13,7 @@ from .utilities import get3rdFriday
 from .parsers import OptionChecker
 
 
-class optionsFromCSV:
+class OptionsFromCSV:
     def __init__(self, filepath, N, usecols=None, dtype=None):
         """Constructor: creates an iterable over options data stored
                         in a CSV file.
@@ -35,52 +35,81 @@ class optionsFromCSV:
                      For example: {0: 'float_', 1: 'int_', 13: 'str_'}.
         """
         self.filepath = filepath
-        self.N = N              # number of observations per option per day
-        config = {'sep': ',', 'header': 0, 'usecols': usecols, 'dtype': dtype}
+        self.N = N  # number of observations per option per day
+        config = {"sep": ",", "header": 0, "usecols": usecols, "dtype": dtype}
         self.data = read_csv(filepath, **config)
-        if len(self.data) % N != 0:
-            raise ValueError("Total observations not divisible by N.")
+        assert len(self.data) % N == 0, f"Number of observations not divisible by {N}"
 
-    def optionsIterator(self):
-        """Iterates over the options data, yielding data for each of
-        the options.
+    def iterate(self):
+        """Given a file with data on several options, yields data for a single
+        option (fixed strike, maturity) at a time.
         """
-        total_obs = len(self.data)//self.N
+        total_obs = len(self.data) // self.N  # number of options in the file
         for i in range(total_obs):
-            start = i*self.N
-            stop = (i+1)*self.N - 1  # pandas slicing includes last index
-            yield self.data.loc[start:stop, :]
+            start = i * self.N
+            stop = (i + 1) * self.N - 1  # pandas slicing includes last index
+            # yields block of data for a single option:
+            # same strike and maturity, observations over a day
+            yield self.data.iloc[start:stop, :]
 
     def __iter__(self):
-        return self.optionsIterator()
+        return self.iterate()
 
 
 class SPX:
-    MINUTES_IN_YEAR = (365 * 24 * 60)
+    MINUTES_IN_YEAR = 365 * 24 * 60
     # List of symbols for SPX options, see Appendix A.1 of ABG2011
-    SYMBOLS = set(['SPX', 'SPXW', 'SPXQ',
-                   'SPB', 'SPQ', 'SPT', 'SPV', 'SPZ',
-                   'SVP', 'SXB', 'SXM', 'SXY', 'SXZ',
-                   'SYG', 'SYU', 'SYV', 'SZP', ])
+    SYMBOLS = set(
+        [
+            "SPX",
+            "SPXW",
+            "SPXQ",
+            "SPB",
+            "SPQ",
+            "SPT",
+            "SPV",
+            "SPZ",
+            "SVP",
+            "SXB",
+            "SXM",
+            "SXY",
+            "SXZ",
+            "SYG",
+            "SYU",
+            "SYV",
+            "SZP",
+        ]
+    )
     # Define field names for SPX data from CBOE
     # currently CBOE is the official vendor of SPX options data
-    Field = namedtuple('Field', ('column_number', 'field_type'))
+    Field = namedtuple("Field", ("column_number", "field_type"))
     # The strings below are the column names in each of the csv
     # files containing SPX options data.
-    Columns = {'quote_datetime': Field(1, 'str_'),
-               'root':           Field(2, 'str_'),
-               'expiration':     Field(3, 'str_'),
-               'strike':         Field(4, 'float_'),
-               'option_type':    Field(5, 'str_'),
-               'trade_volume':   Field(10, 'float_'),
-               'bid_size':       Field(11, 'float_'),
-               'bid':            Field(12, 'float_'),
-               'ask_size':       Field(13, 'float_'),
-               'ask':            Field(14, 'float_'), }
+    Columns = {
+        "quote_datetime": Field(1, "str_"),
+        "root": Field(2, "str_"),
+        "expiration": Field(3, "str_"),
+        "strike": Field(4, "float_"),
+        "option_type": Field(5, "str_"),
+        "trade_volume": Field(10, "float_"),
+        "bid_size": Field(11, "float_"),
+        "bid": Field(12, "float_"),
+        "ask_size": Field(13, "float_"),
+        "ask": Field(14, "float_"),
+    }
     # Fields to be fetched
-    FIELDS = ('quote_datetime', 'root', 'expiration', 'strike',
-              'option_type', 'trade_volume', 'bid', 'ask',
-              'bid_size', 'ask_size')
+    FIELDS = (
+        "quote_datetime",
+        "root",
+        "expiration",
+        "strike",
+        "option_type",
+        "trade_volume",
+        "bid",
+        "ask",
+        "bid_size",
+        "ask_size",
+    )
 
     @classmethod
     def getCSVConfig(cls, column_names):
@@ -104,11 +133,12 @@ class SPX:
             filename = '2007-03-01.csv'
             options_iterator = optionsFromCSV(filename, N=405, **config)
         """
-        column_numbers = [
-            cls.Columns[name].column_number for name in column_names]
-        dtypes = {cls.Columns[name].column_number: cls.Columns[name].field_type for
-                  name in column_names}
-        config = {'usecols': column_numbers, 'dtype': dtypes}
+        column_numbers = [cls.Columns[name].column_number for name in column_names]
+        dtypes = {
+            cls.Columns[name].column_number: cls.Columns[name].field_type
+            for name in column_names
+        }
+        config = {"usecols": column_numbers, "dtype": dtypes}
         return config
 
     @classmethod
@@ -123,13 +153,15 @@ class SPX:
         return checker
 
     @classmethod
-    def createChecker(cls,
-                      verbose=False,
-                      assert_=True,
-                      symbols=True,
-                      weekly=True,
-                      put_only=True,
-                      traded=False):
+    def createChecker(
+        cls,
+        verbose=False,
+        assert_=True,
+        symbols=True,
+        weekly=True,
+        put_only=True,
+        traded=False,
+    ):
         """Checker returns an instance of the class hffe.parsers.OptionChecker,
         augmented to check for issues specific to SPX options."""
         # Create basic checker
@@ -157,17 +189,17 @@ class SPX:
             return True
         else:
             if verbose:
-                print('Option root symbol not accepted')
+                print("Option root symbol not accepted")
             return False
 
     @classmethod
     def weekly(cls, option, verbose=False):
         """Keep only SPX options that are standard or weekly but being traded
         after 2013."""
-        exp_date = datetime.strptime(option.expiration.iloc[0], '%Y-%m-%d')
+        exp_date = datetime.strptime(option.expiration.iloc[0], "%Y-%m-%d")
         if cls.isWeekly(exp_date) and exp_date.year <= 2013:
             if verbose:
-                print('Weekly option and before 2014')
+                print("Weekly option and before 2014")
             return False
         return True
 
@@ -179,7 +211,7 @@ class SPX:
             return True
         else:
             if verbose:
-                print(f'Total trade volume for option is below {threshold}')
+                print(f"Total trade volume for option is below {threshold}")
             return False
 
     @classmethod
@@ -205,7 +237,8 @@ class SPX:
         # compute remaining minutes in current day
         # +1 for the minute between 23:59 and 24:00
         minutes_current_day = (
-            (today.replace(hour=23, minute=59) - today).seconds // 60) + 1
+            (today.replace(hour=23, minute=59) - today).seconds // 60
+        ) + 1
         # compute remaining minutes for days until the expiration date
         # -1 for the day the option expires
         minutes_other = ((expiration - today.date()).days - 1) * (24 * 60)
@@ -219,8 +252,7 @@ class SPX:
         else:
             minutes_settlement = (9.5 + 2.5 + 4) * 60
         # Total minutes to expiration
-        minutes_to_expiration = (minutes_current_day + minutes_other +
-                                 minutes_settlement)
+        minutes_to_expiration = minutes_current_day + minutes_other + minutes_settlement
         return minutes_to_expiration / cls.MINUTES_IN_YEAR
 
     @staticmethod
@@ -283,6 +315,7 @@ class SPX:
                 if checker(option):
                     data.append(parser(option))
             return DataFrame(data)
+
         return query
 
     @classmethod
@@ -304,7 +337,7 @@ class SPX:
         to_do_map = {}
         errors = {}
         done_map = {}
-        with futures.ThreadPoolExecutor(max_workers=2*cpu_count()) as executor:
+        with futures.ThreadPoolExecutor(max_workers=2 * cpu_count()) as executor:
             count = 0
             # Submit query for each filename
             for filename in filenames:
@@ -325,29 +358,30 @@ class SPX:
 
 class BLS:
     @staticmethod
-    def delta(strike: float,
-              underlying_price: float,
-              tenor: float,
-              sigma: float,
-              interest: float,
-              call: bool = True):
+    def delta(
+        strike: float,
+        underlying_price: float,
+        tenor: float,
+        sigma: float,
+        interest: float,
+        call: bool = True,
+    ):
         """Computes Black-Scholes option delta.
 
         Details: https://en.wikipedia.org/wiki/Black–Scholes_model#The_Greeks
         """
-        d1 = (np.log(underlying_price/strike) +
-              (interest + sigma**2/2)*tenor)/(sigma*tenor)
+        d1 = (
+            np.log(underlying_price / strike) + (interest + sigma ** 2 / 2) * tenor
+        ) / (sigma * tenor)
         option_delta = stats.norm.cdf(d1)
         if not call:
             option_delta = option_delta - 1
         return option_delta
 
     @staticmethod
-    def omega(delta: float,
-              underlying_price: float,
-              option_price: float):
+    def omega(delta: float, underlying_price: float, option_price: float):
         """Computes Black-Scholes option omega (elasticity, leverage).
 
         Details: https://en.wikipedia.org/wiki/Greeks_(finance)
         """
-        return delta*underlying_price/option_price
+        return delta * underlying_price / option_price
